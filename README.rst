@@ -1,3 +1,7 @@
+.. image:: https://secure.travis-ci.org/pmuller/django-softdeletion.png?branch=master
+    :target: http://travis-ci.org/pmuller/django-softdeletion
+    :alt: Build status
+
 django-softdeletion implements soft deletion of Django models.
 
 
