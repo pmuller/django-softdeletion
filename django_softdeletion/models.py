@@ -1,3 +1,5 @@
+import logging
+
 from django.db.models import DateTimeField, Model, Manager
 from django.db.models.query import QuerySet
 from django.db.models.fields.related import OneToOneField
@@ -6,7 +8,21 @@ from django.utils.timezone import now
 from django.core.exceptions import ObjectDoesNotExist
 
 
+LOGGER = logging.getLogger(__name__)
+
+
 def _unset_related_objects_relations(obj):
+    LOGGER.debug('Unlinking objects related to %s object %s',
+                 obj._meta.model.__name__, obj.pk)
+    # Soft deleted objects' one-to-one fields must be set to None,
+    # otherwise, they will be retrieved when accessed from the related
+    # object.
+    for field in obj._meta.get_fields():
+        if isinstance(field, OneToOneField):
+            LOGGER.info('Setting %s.%s to None on %s (old value: %s)',
+                        obj._meta.model.__name__, field.name,
+                        obj.pk, getattr(obj, field.name))
+            setattr(obj, field.name, None)
     # Iterate over related fields of this objects.
     for related in obj._meta.get_all_related_objects():
         # Unset related objects' relation
@@ -18,10 +34,19 @@ def _unset_related_objects_relations(obj):
             except ObjectDoesNotExist:
                 pass
             else:
+                LOGGER.info(
+                    'Setting %s.%s to None on %s',
+                    related_object._meta.model.__name__, related.field.name,
+                    related_object.pk)
                 setattr(related_object, related.field.name, None)
                 related_object.save()
         else:
             related_objects = getattr(obj, rel_name)
+            LOGGER.info(
+                'Setting %s.%s to None on %s',
+                related_objects.model.__name__, related.field.name,
+                ', '.join(str(pk) for pk in
+                          related_objects.values_list('pk', flat=True)))
             related_objects.update(**{related.field.name: None})
 
 
@@ -69,18 +94,10 @@ class SoftDeleteModel(Model):
     objects = SoftDeleteManager()
     deleted = DateTimeField(verbose_name=_('deleted'), null=True, blank=True)
 
-    def delete(self, using=None):
+    def delete(self):
         """Soft delete this object.
         """
         _unset_related_objects_relations(self)
-
-        # Soft deleted objects' one-to-one fields must be set to None,
-        # otherwise, they will be retrieved when accessed from the related
-        # object.
-        for field in self._meta.get_fields():
-            if isinstance(field, OneToOneField):
-                setattr(self, field.name, None)
-
         self.deleted = now()
         self.save()
 
