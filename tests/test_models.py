@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.core.exceptions import ObjectDoesNotExist
 
 from django_softdeletion.models import SoftDeleteManager, SoftDeleteQuerySet
-from .app.models import Foo, Bar, Baz
+from .project.app.models import Foo, Bar, Baz
 
 
 class SoftDeletionTestCase(TestCase):
