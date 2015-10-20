@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from os.path import join
+from os.path import join, dirname
 
 from setuptools import setup, find_packages
 
@@ -27,10 +27,16 @@ def get_version():
                 '__version__ is not defined in %s.__init__' % PACKAGE)
 
 
+def read(filename):
+    return open(join(dirname(__file__), filename)).read()
+
+
 setup(
     name=NAME,
     version=get_version(),
-    description='Soft deletion mixin for Django models',
+    description='Soft deletion for Django models',
+    long_description=read('README.rst'),
+    url='https://github.com/pmuller/django-softdeletion',
     packages=find_packages(),
     install_requires=REQUIREMENTS,
     classifiers=CLASSIFIERS,
