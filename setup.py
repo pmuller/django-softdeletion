@@ -36,6 +36,8 @@ setup(
     version=get_version(),
     description='Soft deletion for Django models',
     long_description=read('README.rst'),
+    author='Philippe Muller',
+    author_email='philippe.muller@gmail.com',
     url='https://github.com/pmuller/django-softdeletion',
     packages=find_packages(),
     install_requires=REQUIREMENTS,
