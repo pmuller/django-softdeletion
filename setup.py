@@ -7,13 +7,13 @@ from setuptools import setup, find_packages
 
 NAME = 'django-softdeletion'
 PACKAGE = NAME.replace('-', '_')
-CLASSIFIERS = """\
-Development Status :: 3 - Alpha
-Environment :: Web Environment
-Framework :: Django
-Programming Language :: Python :: 2.7
-License :: OSI Approved :: MIT License
-"""
+CLASSIFIERS = (
+    'Development Status :: 3 - Alpha',
+    'Environment :: Web Environment',
+    'Framework :: Django',
+    'Programming Language :: Python :: 2.7',
+    'License :: OSI Approved :: MIT License',
+)
 REQUIREMENTS = open('requirements/base.txt').read()
 
 
