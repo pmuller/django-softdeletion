@@ -12,6 +12,7 @@ Development Status :: 3 - Alpha
 Environment :: Web Environment
 Framework :: Django
 Programming Language :: Python :: 2.7
+License :: OSI Approved :: MIT License
 """
 REQUIREMENTS = open('requirements/base.txt').read()
 
@@ -34,4 +35,5 @@ setup(
     install_requires=REQUIREMENTS,
     classifiers=CLASSIFIERS,
     test_suite='runtests.runtests',
+    license='MIT',
 )
