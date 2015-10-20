@@ -14,7 +14,7 @@ CLASSIFIERS = (
     'Programming Language :: Python :: 2.7',
     'License :: OSI Approved :: MIT License',
 )
-REQUIREMENTS = open('requirements/base.txt').read()
+REQUIREMENTS = ['Django >= 1.8.5']
 
 
 def get_version():
