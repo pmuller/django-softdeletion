@@ -88,6 +88,17 @@ class SoftDeleteQuerySet(QuerySet):
 
         self.update(deleted=now())
 
+    def undelete(self):
+        """Soft undelete all objects included in this queryset.
+        """
+        objects = self.filter(deleted__isnull=False)
+        if objects.count():
+            LOGGER.debug(
+                'Soft undeleting %s objects: %s', self.model.__name__,
+                ', '.join(str(pk)
+                          for pk in objects.values_list('pk', flat=True)))
+            objects.update(deleted=None)
+
 
 class SoftDeleteManager(Manager.from_queryset(SoftDeleteQuerySet)):
     """This Manager hides soft deleted objects by default,

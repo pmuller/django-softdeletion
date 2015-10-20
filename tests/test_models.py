@@ -81,3 +81,13 @@ class SoftDeletionTestCase(TestCase):
         foo.delete()
         baz.refresh_from_db()
         self.assertRaises(ObjectDoesNotExist, lambda: baz.foo)
+
+    def test_queryset_undelete(self):
+        self.assertEqual(Baz.objects.count(), 0)
+        Baz.objects.create()
+        Baz.objects.create()
+        self.assertEqual(Baz.objects.count(), 2)
+        Baz.objects.delete()
+        self.assertEqual(Baz.objects.count(), 0)
+        Baz.objects.deleted().undelete()
+        self.assertEqual(Baz.objects.count(), 2)
