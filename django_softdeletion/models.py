@@ -2,7 +2,8 @@ import logging
 
 from django.db.models import DateTimeField, Model, Manager
 from django.db.models.query import QuerySet
-from django.db.models.fields.related import OneToOneField
+from django.db.models.fields.related import \
+    OneToOneField, ManyToManyField, ManyToManyRel
 from django.utils.translation import ugettext_lazy as _
 from django.utils.timezone import now
 from django.core.exceptions import ObjectDoesNotExist
@@ -11,43 +12,69 @@ from django.core.exceptions import ObjectDoesNotExist
 LOGGER = logging.getLogger(__name__)
 
 
+def _unset_related_one_to_one(obj, field):
+    old_value = getattr(obj, field.column)
+    if old_value is not None:
+        LOGGER.debug(
+            'Setting %s.%s to None on object %s (old value: %s)',
+            obj._meta.model.__name__, field.column, obj.pk, old_value)
+        # Unset the fk field (e.g. Foo.baz_id)
+        setattr(obj, field.column, None)
+        # Unset the related object field (e.g. Foo.baz)
+        setattr(obj, field.name, None)
+
+
+def _unset_related_many_to_many(obj, field):
+    manager = getattr(obj, field.name)
+    old_values = manager.values_list('pk', flat=True)
+    LOGGER.debug(
+        'Removing all objects from %s.%s on object %s (old values: %s)',
+        obj._meta.model.__name__, field.name, obj.pk,
+        ', '.join(str(pk) for pk in old_values))
+    manager.remove(*manager.all())
+
+
 def _unset_related_objects_relations(obj):
-    LOGGER.debug('Unlinking objects related to %s object %s',
+    LOGGER.debug('Soft-deleting object %s %s',
                  obj._meta.model.__name__, obj.pk)
-    # Soft deleted objects' one-to-one fields must be set to None,
-    # otherwise, they will be retrieved when accessed from the related
-    # object.
+
     for field in obj._meta.get_fields():
-        if isinstance(field, OneToOneField):
-            LOGGER.info('Setting %s.%s to None on %s (old value: %s)',
-                        obj._meta.model.__name__, field.name,
-                        obj.pk, getattr(obj, field.name))
-            setattr(obj, field.name, None)
-    # Iterate over related fields of this objects.
+        field_type = type(field)
+
+        if field_type is OneToOneField:
+            _unset_related_one_to_one(obj, field)
+        elif field_type in (ManyToManyRel, ManyToManyField):
+            _unset_related_many_to_many(obj, field)
+
     for related in obj._meta.get_all_related_objects():
         # Unset related objects' relation
         rel_name = related.get_accessor_name()
 
         if related.one_to_one:
+            # Handle one-to-one relations.
             try:
                 related_object = getattr(obj, rel_name)
             except ObjectDoesNotExist:
                 pass
             else:
-                LOGGER.info(
-                    'Setting %s.%s to None on %s',
-                    related_object._meta.model.__name__, related.field.name,
-                    related_object.pk)
-                setattr(related_object, related.field.name, None)
+                _unset_related_one_to_one(related_object, related.field)
                 related_object.save()
+
         else:
+            # Handle one-to-many and many-to-many relations.
             related_objects = getattr(obj, rel_name)
-            LOGGER.info(
-                'Setting %s.%s to None on %s',
-                related_objects.model.__name__, related.field.name,
-                ', '.join(str(pk) for pk in
-                          related_objects.values_list('pk', flat=True)))
-            related_objects.update(**{related.field.name: None})
+            if related_objects.count():
+                affected_objects_id = ', '.join(
+                    str(pk) for pk in related_objects.values_list(
+                        'pk', flat=True))
+                old_values = ', '.join(
+                    str(val) for val in related_objects.values_list(
+                        related.field.name, flat=True))
+                LOGGER.debug(
+                    'Setting %s.%s to None on objects %s (old values: %s)',
+                    related_objects.model.__name__, related.field.name,
+                    affected_objects_id, old_values)
+                related_objects.update(**{related.field.name: None})
 
 
 class SoftDeleteQuerySet(QuerySet):
@@ -101,8 +128,15 @@ class SoftDeleteModel(Model):
         self.deleted = now()
         self.save()
 
+        return self
+
     def undelete(self):
         """Undelete this soft-deleted object.
         """
-        self.deleted = None
-        self.save()
+        if self.deleted is not None:
+            LOGGER.debug('Soft-undeleting object %s %s',
+                         self._meta.model.__name__, self.pk)
+            self.deleted = None
+            self.save()
+
+        return self

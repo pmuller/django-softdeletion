@@ -62,11 +62,11 @@ class SoftDeletionTestCase(TestCase):
         self.assertEqual(bar1.bazes.deleted().count(), 2)
 
         baz1.undelete()
-        self.assertEqual(baz1.bars.count(), 1)
+        self.assertEqual(baz1.bars.count(), 0)
 
         bar2 = Bar.objects.create()
         baz1.bars.add(bar2)
-        self.assertEqual(baz1.bars.count(), 2)
+        self.assertEqual(baz1.bars.count(), 1)
 
     def test_one_to_one(self):
         baz = Baz.objects.create()
