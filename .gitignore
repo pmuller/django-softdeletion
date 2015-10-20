@@ -8,7 +8,8 @@ _build/
 .eggs/
 # virtualenv
 .env/
-# setuptools
+# setuptools / distutils
+dist/
 *.egg-info
 # coverage.py
 .coverage
